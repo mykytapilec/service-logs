@@ -13,16 +13,14 @@ const logsSlice = createSlice({
   name: 'logs',
   initialState,
   reducers: {
-    addLog(state, action: PayloadAction<ServiceLog>) {
+    addLog: (state, action: PayloadAction<ServiceLog>) => {
       state.logs.push(action.payload);
     },
-    updateLog(state, action: PayloadAction<ServiceLog>) {
+    updateLog: (state, action: PayloadAction<ServiceLog>) => {
       const index = state.logs.findIndex(log => log.id === action.payload.id);
-      if (index !== -1) {
-        state.logs[index] = action.payload;
-      }
+      if (index !== -1) state.logs[index] = action.payload;
     },
-    deleteLog(state, action: PayloadAction<string>) {
+    deleteLog: (state, action: PayloadAction<string>) => {
       state.logs = state.logs.filter(log => log.id !== action.payload);
     },
   },

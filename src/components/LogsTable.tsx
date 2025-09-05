@@ -1,40 +1,47 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
-import { ServiceLog } from '../types';
 import { EditLogModal } from './EditLogModal';
+import { DeleteLogModal } from './DeleteLogModal';
 
 export const LogsTable: React.FC = () => {
   const logs = useSelector((state: RootState) => state.logs.logs);
-  const [selectedLog, setSelectedLog] = useState<ServiceLog | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   return (
-    <div>
-      <table className="w-full border-collapse">
+    <>
+      <table className="table-auto w-full border">
         <thead>
           <tr>
-            <th className="border p-2">Provider</th>
-            <th className="border p-2">Order</th>
-            <th className="border p-2">Car ID</th>
-            <th className="border p-2">Odometer</th>
-            <th className="border p-2">Type</th>
-            <th className="border p-2">Actions</th>
+            <th>Provider</th>
+            <th>Service Order</th>
+            <th>Car</th>
+            <th>Odometer</th>
+            <th>Engine Hours</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {logs.map(log => (
-            <tr key={log.id}>
-              <td className="border p-2">{log.providerId}</td>
-              <td className="border p-2">{log.serviceOrder}</td>
-              <td className="border p-2">{log.carId}</td>
-              <td className="border p-2">{log.odometer}</td>
-              <td className="border p-2">{log.type}</td>
-              <td className="border p-2">
+            <tr key={log.id} className="border-t">
+              <td>{log.providerId}</td>
+              <td>{log.serviceOrder}</td>
+              <td>{log.carId}</td>
+              <td>{log.odometer}</td>
+              <td>{log.engineHours}</td>
+              <td className="flex gap-2">
                 <button
-                  className="bg-yellow-400 text-white rounded p-1"
-                  onClick={() => setSelectedLog(log)}
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={() => setEditId(log.id)}
                 >
                   Edit
+                </button>
+                <button
+                  className="bg-red-500 text-white px-2 py-1 rounded"
+                  onClick={() => setDeleteId(log.id)}
+                >
+                  Delete
                 </button>
               </td>
             </tr>
@@ -42,12 +49,20 @@ export const LogsTable: React.FC = () => {
         </tbody>
       </table>
 
-      {selectedLog && (
+      {editId && (
         <EditLogModal
-          log={selectedLog}
-          onClose={() => setSelectedLog(null)}
+          log={logs.find(log => log.id === editId)!}
+          onClose={() => setEditId(null)}
         />
       )}
-    </div>
+
+      {deleteId && (
+        <DeleteLogModal
+          logId={deleteId}
+          open={Boolean(deleteId)}
+          onClose={() => setDeleteId(null)}
+        />
+      )}
+    </>
   );
 };
