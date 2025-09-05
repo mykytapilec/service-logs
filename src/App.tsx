@@ -1,19 +1,22 @@
 import React from 'react';
-import { ServiceLogForm } from './components/ServiceLogForm';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './redux/store';
 import { LogsTable } from './components/LogsTable';
+import { ServiceLogForm } from './components/ServiceLogForm';
 
-export const App: React.FC = () => {
+function App() {
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold mb-6">Service Logs Management</h1>
-      <div className="grid grid-cols-2 gap-6">
-        <div>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <div className="container mx-auto p-4">
+          <h1 className="text-2xl font-bold mb-4">Service Logs</h1>
           <ServiceLogForm />
-        </div>
-        <div>
           <LogsTable />
         </div>
-      </div>
-    </div>
+      </PersistGate>
+    </Provider>
   );
-};
+}
+
+export default App;

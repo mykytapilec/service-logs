@@ -5,8 +5,8 @@ export interface DraftLog {
   providerId: string;
   serviceOrder: string;
   carId: string;
-  odometer: number;
-  engineHours: number;
+  odometer: string;
+  engineHours: string;
   startDate: string;
   endDate: string;
   type: ServiceType;

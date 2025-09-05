@@ -2,9 +2,10 @@ import React, { useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { addLog } from '../redux/slices/logsSlice';
 import { deleteDraft } from '../redux/slices/draftsSlice';
-import { ServiceLog, DraftLog, ServiceType } from '../types/index';
+import { ServiceLog, ServiceType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useAutoSaveDraft } from '../hooks/useAutoSaveDraft';
+import { DraftLog } from '../types/index';
 
 export const ServiceLogForm: React.FC = () => {
   const dispatch = useDispatch();
@@ -15,8 +16,8 @@ export const ServiceLogForm: React.FC = () => {
     providerId: '',
     serviceOrder: '',
     carId: '',
-    odometer: 0,
-    engineHours: 0,
+    odometer: '',
+    engineHours: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0],
     type: 'planned',
@@ -41,20 +42,23 @@ export const ServiceLogForm: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    const { id: draftId, ...logData } = form;
-    const newLog: ServiceLog = { id: uuidv4(), ...logData, createdAt: new Date().toISOString() };
-    dispatch(addLog(newLog));
+    const { id: draftId, odometer, engineHours, ...rest } = form;
+    const newLog: ServiceLog = {
+      id: uuidv4(),
+      ...rest,
+      odometer: Number(odometer),
+      engineHours: Number(engineHours),
+      createdAt: new Date().toISOString(),
+    };
 
+    dispatch(addLog(newLog));
     dispatch(deleteDraft(draftId));
 
-    const newDraft: DraftLog = { ...initialForm, id: uuidv4() };
-    setForm(newDraft);
-
+    setForm({ ...initialForm, id: uuidv4() });
     setTimeout(() => firstInputRef.current?.focus(), 0);
 
     setNotification('Service log created!');
     setTimeout(() => setNotification(''), 2000);
-
     setStatus('Draft not saved');
   };
 
@@ -90,14 +94,14 @@ export const ServiceLogForm: React.FC = () => {
           type="number"
           placeholder="Odometer"
           value={form.odometer}
-          onChange={e => handleChange('odometer', Number(e.target.value))}
+          onChange={e => handleChange('odometer', e.target.value)}
           className="border rounded p-2"
         />
         <input
           type="number"
           placeholder="Engine Hours"
           value={form.engineHours}
-          onChange={e => handleChange('engineHours', Number(e.target.value))}
+          onChange={e => handleChange('engineHours', e.target.value)}
           className="border rounded p-2"
         />
         <input

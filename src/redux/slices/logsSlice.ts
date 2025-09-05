@@ -1,25 +1,28 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ServiceLog } from '../../types/index';
+import { ServiceLog } from '../../types';
 
 interface LogsState {
   logs: ServiceLog[];
 }
 
-const initialState: LogsState = { logs: [] };
+const initialState: LogsState = {
+  logs: [],
+};
 
 const logsSlice = createSlice({
   name: 'logs',
   initialState,
   reducers: {
-    addLog: (state, action: PayloadAction<ServiceLog>) => {
-      if (!state.logs) state.logs = [];
+    addLog(state, action: PayloadAction<ServiceLog>) {
       state.logs.push(action.payload);
     },
-    updateLog: (state, action: PayloadAction<ServiceLog>) => {
+    updateLog(state, action: PayloadAction<ServiceLog>) {
       const index = state.logs.findIndex(log => log.id === action.payload.id);
-      if (index >= 0) state.logs[index] = action.payload;
+      if (index !== -1) {
+        state.logs[index] = action.payload;
+      }
     },
-    deleteLog: (state, action: PayloadAction<string>) => {
+    deleteLog(state, action: PayloadAction<string>) {
       state.logs = state.logs.filter(log => log.id !== action.payload);
     },
   },
