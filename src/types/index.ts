@@ -5,13 +5,13 @@ export interface DraftLog {
   providerId: string;
   serviceOrder: string;
   carId: string;
-  odometer: string;
-  engineHours: string;
+  odometer: number;      
+  engineHours: number;  
   startDate: string;
   endDate: string;
   type: ServiceType;
   serviceDescription: string;
-  lastSaved?: string;
+  lastSaved?: string; 
 }
 
 export interface ServiceLog {
