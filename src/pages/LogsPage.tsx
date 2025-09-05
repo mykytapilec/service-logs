@@ -1,5 +1,6 @@
 import React from 'react'
 import ServiceLogForm from '../components/ServiceLogForm'
+import LogsTable from '../components/LogsTable'
 
 export default function LogsPage() {
   return (
@@ -8,7 +9,7 @@ export default function LogsPage() {
         <ServiceLogForm />
       </div>
       <div className="md:col-span-2">
-        <div className="bg-white p-4 rounded shadow">temp</div>
+        <LogsTable />
       </div>
     </div>
   )

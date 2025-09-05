@@ -35,12 +35,16 @@ export default function ServiceLogForm() {
 
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
 
-  // auto-update endDate when startDate changes
   useEffect(() => {
-    setLocal(prev => ({ ...prev, endDate: isoDateAddDays(prev.startDate, 1) }))
+    setLocal(prev => {
+        const newEnd = isoDateAddDays(prev.startDate, 1)
+        if (prev.endDate !== newEnd) {
+        return { ...prev, endDate: newEnd }
+        }
+        return prev
+    })
   }, [local.startDate])
 
-  // autosave (debounce imitation)
   useEffect(() => {
     setStatus('saving')
     const t = setTimeout(() => {
