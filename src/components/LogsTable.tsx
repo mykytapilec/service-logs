@@ -7,17 +7,35 @@ import { DeleteLogModal } from './DeleteLogModal';
 export const LogsTable: React.FC = () => {
   const logs = useSelector((state: RootState) => state.logs.logs);
 
-  // Состояние для редактирования и удаления
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Поиск и фильтры
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [startDateFrom, setStartDateFrom] = useState('');
   const [startDateTo, setStartDateTo] = useState('');
 
-  // Фильтруем логи
+  const [sortField, setSortField] = useState<'startDate' | 'odometer' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>('default');
+
+  const toggleSort = (field: 'startDate' | 'odometer') => {
+    if (sortField === field) {
+      if (sortOrder === 'asc') setSortOrder('desc');
+      else if (sortOrder === 'desc') {
+        setSortOrder('default');
+        setSortField(null);
+      } else setSortOrder('asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (field: 'startDate' | 'odometer') => {
+    if (sortField !== field || sortOrder === 'default') return '⇅';
+    return sortOrder === 'asc' ? '↑' : '↓';
+  };
+
   const filteredLogs = logs.filter(log => {
     const matchesSearch =
       log.providerId.includes(search) ||
@@ -26,19 +44,37 @@ export const LogsTable: React.FC = () => {
 
     const matchesType = typeFilter === 'all' ? true : log.type === typeFilter;
 
-    const logDate = new Date(log.startDate);
+    const logDate = log.startDate ? new Date(log.startDate) : null;
     const fromDate = startDateFrom ? new Date(startDateFrom) : null;
     const toDate = startDateTo ? new Date(startDateTo) : null;
 
     const matchesDate =
-      (!fromDate || logDate >= fromDate) && (!toDate || logDate <= toDate);
+      (!fromDate || (logDate && logDate >= fromDate)) &&
+      (!toDate || (logDate && logDate <= toDate));
 
     return matchesSearch && matchesType && matchesDate;
   });
 
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    if (!sortField || sortOrder === 'default') return 0;
+
+    let aValue: string | number =
+      a[sortField] !== null && a[sortField] !== undefined ? a[sortField]! : '';
+    let bValue: string | number =
+      b[sortField] !== null && b[sortField] !== undefined ? b[sortField]! : '';
+
+    if (sortField === 'startDate') {
+      aValue = new Date(aValue as string).getTime();
+      bValue = new Date(bValue as string).getTime();
+    }
+
+    if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   return (
     <>
-      {/* Поиск и фильтры */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <input
           type="text"
@@ -71,27 +107,36 @@ export const LogsTable: React.FC = () => {
         />
       </div>
 
-      {/* Таблица */}
       <table className="table-auto w-full border">
         <thead>
           <tr>
             <th>Provider</th>
             <th>Service Order</th>
             <th>Car</th>
-            <th>Odometer</th>
+            <th>
+              <button onClick={() => toggleSort('odometer')}>
+                Odometer {renderSortIcon('odometer')}
+              </button>
+            </th>
             <th>Engine Hours</th>
+            <th>
+              <button onClick={() => toggleSort('startDate')}>
+                Start Date {renderSortIcon('startDate')}
+              </button>
+            </th>
             <th>Type</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filteredLogs.map(log => (
+          {sortedLogs.map(log => (
             <tr key={log.id} className="border-t">
               <td>{log.providerId}</td>
               <td>{log.serviceOrder}</td>
               <td>{log.carId}</td>
-              <td>{log.odometer}</td>
-              <td>{log.engineHours}</td>
+              <td>{log.odometer ?? '-'}</td>
+              <td>{log.engineHours ?? '-'}</td>
+              <td>{log.startDate ?? '-'}</td>
               <td>{log.type}</td>
               <td className="flex gap-2">
                 <button
@@ -112,7 +157,6 @@ export const LogsTable: React.FC = () => {
         </tbody>
       </table>
 
-      {/* Модалка редактирования */}
       {editId && (
         <EditLogModal
           log={logs.find(log => log.id === editId)!}
@@ -120,7 +164,6 @@ export const LogsTable: React.FC = () => {
         />
       )}
 
-      {/* Модалка удаления */}
       {deleteId && (
         <DeleteLogModal
           logId={deleteId}
