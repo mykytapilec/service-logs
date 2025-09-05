@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { addLog } from '../redux/slices/logsSlice';
 import { deleteDraft } from '../redux/slices/draftsSlice';
@@ -25,6 +25,7 @@ export const ServiceLogForm: React.FC = () => {
 
   const [form, setForm] = useState<DraftLog>(initialForm);
   const [status, setStatus] = useState('Draft not saved');
+  const [notification, setNotification] = useState('');
 
   useAutoSaveDraft(form);
 
@@ -41,13 +42,7 @@ export const ServiceLogForm: React.FC = () => {
 
   const handleSubmit = () => {
     const { id: draftId, ...logData } = form;
-
-    const newLog: ServiceLog = {
-      id: uuidv4(),
-      ...logData,
-      createdAt: new Date().toISOString(),
-    };
-
+    const newLog: ServiceLog = { id: uuidv4(), ...logData, createdAt: new Date().toISOString() };
     dispatch(addLog(newLog));
 
     dispatch(deleteDraft(draftId));
@@ -55,16 +50,22 @@ export const ServiceLogForm: React.FC = () => {
     const newDraft: DraftLog = { ...initialForm, id: uuidv4() };
     setForm(newDraft);
 
-    setTimeout(() => {
-      firstInputRef.current?.focus();
-    }, 0);
+    setTimeout(() => firstInputRef.current?.focus(), 0);
 
-    setStatus('Service log created!');
+    setNotification('Service log created!');
+    setTimeout(() => setNotification(''), 2000);
+
+    setStatus('Draft not saved');
   };
 
   return (
-    <div className="bg-white shadow rounded p-4 mb-4">
+    <div className="bg-white shadow rounded p-4 mb-4 relative">
       <h2 className="text-xl font-bold mb-4">Create Service Log</h2>
+      {notification && (
+        <div className="absolute top-2 right-2 bg-green-200 text-green-800 p-2 rounded shadow">
+          {notification}
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <input
           ref={firstInputRef}
