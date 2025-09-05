@@ -1,215 +1,74 @@
-import React, { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { v4 as uuidv4 } from 'uuid'
-import { RootState, AppDispatch } from '../store'
-import { upsertDraft, removeDraft } from '../slices/draftsSlice'
-import { addLog } from '../slices/logsSlice'
-import { Draft, ServiceLog } from '../types'
+import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { addLog } from '../redux/slices/logsSlice';
+import { saveDraft } from '../redux/slices/draftsSlice';
+import { ServiceLog, DraftLog, ServiceType } from '../types/index';
+import { v4 as uuidv4 } from 'uuid';
 
-function isoDateAddDays(base: string, days: number) {
-  const d = new Date(base)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
-}
+export const ServiceLogForm: React.FC = () => {
+  const dispatch = useDispatch();
 
-export default function ServiceLogForm() {
-  const dispatch = useDispatch<AppDispatch>()
-  const drafts = useSelector((s: RootState) => s.drafts.items)
+  const [form, setForm] = useState<DraftLog>({
+    providerId: '',
+    serviceOrder: '',
+    carId: '',
+    odometer: 0,
+    engineHours: 0,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0],
+    type: 'planned',
+    serviceDescription: '',
+  });
 
-  const [local, setLocal] = useState<Draft>(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    return {
-      draftId: uuidv4(),
-      providerId: '',
-      serviceOrder: '',
-      carId: '',
-      odometer: null,
-      engineHours: null,
-      startDate: today,
-      endDate: isoDateAddDays(today, 1),
-      type: 'planned',
-      serviceDescription: '',
-      isSaved: false,
-    }
-  })
-
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [status, setStatus] = useState('Draft not saved');
 
   useEffect(() => {
-    setLocal(prev => {
-        const newEnd = isoDateAddDays(prev.startDate, 1)
-        if (prev.endDate !== newEnd) {
-        return { ...prev, endDate: newEnd }
-        }
-        return prev
-    })
-  }, [local.startDate])
+    const timeout = setTimeout(() => {
+      dispatch(saveDraft({ ...form, lastSaved: new Date().toISOString() }));
+      setStatus('Draft saved');
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [form, dispatch]);
 
-  useEffect(() => {
-    setStatus('saving')
-    const t = setTimeout(() => {
-      dispatch(upsertDraft(local))
-      setStatus('saved')
-      setLocal(prev => ({ ...prev, isSaved: true }))
-    }, 500)
-    return () => clearTimeout(t)
-  }, [local, dispatch])
-
-  const createLog = () => {
-    const log: ServiceLog = {
-      id: uuidv4(),
-      providerId: local.providerId,
-      serviceOrder: local.serviceOrder,
-      carId: local.carId,
-      odometer: local.odometer,
-      engineHours: local.engineHours,
-      startDate: local.startDate,
-      endDate: local.endDate,
-      type: local.type,
-      serviceDescription: local.serviceDescription,
-      createdAt: new Date().toISOString(),
+  const handleChange = (key: keyof DraftLog, value: any) => {
+    if (key === 'startDate') {
+      const newEndDate = new Date(new Date(value).getTime() + 24*60*60*1000)
+        .toISOString().split('T')[0];
+      setForm({...form, startDate: value, endDate: newEndDate});
+    } else {
+      setForm({...form, [key]: value});
     }
-    dispatch(addLog(log))
-    dispatch(removeDraft({ draftId: local.draftId }))
-    const today = new Date().toISOString().slice(0, 10)
-    setLocal({
-      draftId: uuidv4(),
-      providerId: '',
-      serviceOrder: '',
-      carId: '',
-      odometer: null,
-      engineHours: null,
-      startDate: today,
-      endDate: isoDateAddDays(today, 1),
-      type: 'planned',
-      serviceDescription: '',
-      isSaved: false,
-    })
-  }
+    setStatus('Saving...');
+  };
+
+  const handleSubmit = () => {
+    const newLog: ServiceLog = { id: uuidv4(), ...form, createdAt: new Date().toISOString() };
+    dispatch(addLog(newLog));
+    setStatus('Service log created!');
+  };
 
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold">Create Service Log (Draft)</h2>
-        <div className="text-sm text-slate-500">
-          {status === 'saving' ? 'Saving...' : 'Draft saved'}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <input
-          className="w-full p-2 border rounded"
-          placeholder="Provider ID"
-          value={local.providerId}
-          onChange={e => setLocal({ ...local, providerId: e.target.value })}
-        />
-
-        <input
-          className="w-full p-2 border rounded"
-          placeholder="Service Order"
-          value={local.serviceOrder}
-          onChange={e => setLocal({ ...local, serviceOrder: e.target.value })}
-        />
-
-        <input
-          className="w-full p-2 border rounded"
-          placeholder="Car ID"
-          value={local.carId}
-          onChange={e => setLocal({ ...local, carId: e.target.value })}
-        />
-
-        <input
-          className="w-full p-2 border rounded"
-          type="number"
-          placeholder="Odometer (mi)"
-          value={local.odometer ?? ''}
-          onChange={e =>
-            setLocal({
-              ...local,
-              odometer: e.target.value === '' ? null : Number(e.target.value),
-            })
-          }
-        />
-
-        <input
-          className="w-full p-2 border rounded"
-          type="number"
-          placeholder="Engine Hours"
-          value={local.engineHours ?? ''}
-          onChange={e =>
-            setLocal({
-              ...local,
-              engineHours: e.target.value === '' ? null : Number(e.target.value),
-            })
-          }
-        />
-
-        <label className="block">
-          <div className="text-sm">Start Date</div>
-          <input
-            className="w-full p-2 border rounded"
-            type="date"
-            value={local.startDate}
-            onChange={e => setLocal({ ...local, startDate: e.target.value })}
-          />
-        </label>
-
-        <label className="block">
-          <div className="text-sm">End Date</div>
-          <input
-            className="w-full p-2 border rounded"
-            type="date"
-            value={local.endDate}
-            onChange={e => setLocal({ ...local, endDate: e.target.value })}
-          />
-        </label>
-
-        <select
-          className="w-full p-2 border rounded"
-          value={local.type}
-          onChange={e => setLocal({ ...local, type: e.target.value as any })}
-        >
+    <div className="bg-white shadow rounded p-4 mb-4">
+      <h2 className="text-xl font-bold mb-4">Create Service Log</h2>
+      <div className="flex flex-col gap-2">
+        <input placeholder="Provider ID" value={form.providerId} onChange={e=>handleChange('providerId', e.target.value)} className="border rounded p-2"/>
+        <input placeholder="Service Order" value={form.serviceOrder} onChange={e=>handleChange('serviceOrder', e.target.value)} className="border rounded p-2"/>
+        <input placeholder="Car ID" value={form.carId} onChange={e=>handleChange('carId', e.target.value)} className="border rounded p-2"/>
+        <input type="number" placeholder="Odometer" value={form.odometer} onChange={e=>handleChange('odometer', Number(e.target.value))} className="border rounded p-2"/>
+        <input type="number" placeholder="Engine Hours" value={form.engineHours} onChange={e=>handleChange('engineHours', Number(e.target.value))} className="border rounded p-2"/>
+        <input type="date" value={form.startDate} onChange={e=>handleChange('startDate', e.target.value)} className="border rounded p-2"/>
+        <input type="date" value={form.endDate} readOnly className="border rounded p-2 bg-gray-100"/>
+        <select value={form.type} onChange={e=>handleChange('type', e.target.value as ServiceType)} className="border rounded p-2">
           <option value="planned">Planned</option>
           <option value="unplanned">Unplanned</option>
           <option value="emergency">Emergency</option>
         </select>
-
-        <textarea
-          className="w-full p-2 border rounded"
-          placeholder="Service Description"
-          value={local.serviceDescription}
-          onChange={e =>
-            setLocal({ ...local, serviceDescription: e.target.value })
-          }
-        />
-
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-2 bg-blue-600 text-white rounded"
-            onClick={createLog}
-          >
-            Create Service Log
-          </button>
-        </div>
+        <textarea placeholder="Description" value={form.serviceDescription} onChange={e=>handleChange('serviceDescription', e.target.value)} className="border rounded p-2"/>
       </div>
-
-      <div className="mt-4">
-        <h3 className="text-sm font-medium">Local Drafts ({drafts.length})</h3>
-        <ul className="text-sm mt-2">
-          {drafts.map(d => (
-            <li key={d.draftId} className="flex justify-between border-b py-2">
-              <div>
-                {d.serviceOrder || (
-                  <span className="text-slate-400">(no order)</span>
-                )}
-              </div>
-              <div className="text-green-600">
-                {d.isSaved ? 'Saved' : 'Unsaved'}
-              </div>
-            </li>
-          ))}
-        </ul>
+      <div className="flex justify-between items-center mt-2">
+        <span className="text-sm text-gray-500">{status}</span>
+        <button onClick={handleSubmit} className="bg-blue-500 text-white rounded p-2">Create Service Log</button>
       </div>
     </div>
-  )
-}
+  );
+};
