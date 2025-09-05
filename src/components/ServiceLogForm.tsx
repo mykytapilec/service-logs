@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { saveDraft, deleteDraft } from '../redux/slices/draftsSlice';
+import { deleteDraft } from '../redux/slices/draftsSlice';
 import { addLog } from '../redux/slices/logsSlice';
 import { ServiceType, ServiceLog } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,36 +12,25 @@ export const ServiceLogForm = () => {
   const dispatch = useDispatch();
   const drafts = useSelector((state: RootState) => state.drafts.drafts);
 
-  const initialFormData: Omit<DraftLog, 'id' | 'lastSaved'> = drafts.length
-    ? {
-        providerId: drafts[drafts.length - 1].providerId,
-        serviceOrder: drafts[drafts.length - 1].serviceOrder,
-        carId: drafts[drafts.length - 1].carId,
-        odometer: drafts[drafts.length - 1].odometer,
-        engineHours: drafts[drafts.length - 1].engineHours,
-        startDate: drafts[drafts.length - 1].startDate,
-        endDate: drafts[drafts.length - 1].endDate,
-        type: drafts[drafts.length - 1].type,
-        serviceDescription: drafts[drafts.length - 1].serviceDescription,
-      }
-    : {
-        providerId: '',
-        serviceOrder: '',
-        carId: '',
-        odometer: 0,
-        engineHours: 0,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-        type: 'planned',
-        serviceDescription: '',
-      };
+  const initialFormData: Omit<DraftLog, 'id' | 'lastSaved'> = {
+    providerId: '',
+    serviceOrder: '',
+    carId: '',
+    odometer: 0,
+    engineHours: 0,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    type: 'planned',
+    serviceDescription: '',
+  };
 
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState<Omit<DraftLog, 'id' | 'lastSaved'>>(initialFormData);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState<string | null>(null);
 
-  const status = useAutoSaveDraft(formData);
-
+  const loadedOnceRef = useRef(false);
   useEffect(() => {
-    if (drafts.length) {
+    if (!loadedOnceRef.current && drafts.length) {
       const lastDraft = drafts[drafts.length - 1];
       setFormData({
         providerId: lastDraft.providerId,
@@ -54,10 +43,33 @@ export const ServiceLogForm = () => {
         type: lastDraft.type,
         serviceDescription: lastDraft.serviceDescription,
       });
+      loadedOnceRef.current = true;
     }
   }, [drafts]);
 
+  const existingDraftId = drafts.length ? drafts[drafts.length - 1].id : undefined;
+  const status = useAutoSaveDraft(formData, existingDraftId);
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.providerId.trim()) newErrors.providerId = 'Provider ID is required';
+    if (!formData.serviceOrder.trim()) newErrors.serviceOrder = 'Service Order is required';
+    if (!formData.carId.trim()) newErrors.carId = 'Car ID is required';
+    if (formData.odometer <= 0) newErrors.odometer = 'Odometer must be greater than 0';
+    if (formData.engineHours < 0) newErrors.engineHours = 'Engine hours cannot be negative';
+    if (!formData.startDate) newErrors.startDate = 'Start date is required';
+    if (!formData.endDate) newErrors.endDate = 'End date is required';
+    if (new Date(formData.endDate) < new Date(formData.startDate)) {
+      newErrors.endDate = 'End date cannot be before start date';
+    }
+    if (!formData.serviceDescription.trim()) newErrors.serviceDescription = 'Description is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleCreateLog = () => {
+    if (!validate()) return;
+
     const newLog: ServiceLog = {
       ...formData,
       id: uuidv4(),
@@ -68,18 +80,15 @@ export const ServiceLogForm = () => {
     const latestDraftId = drafts[drafts.length - 1]?.id;
     if (latestDraftId) dispatch(deleteDraft(latestDraftId));
 
-    setFormData({
-      providerId: '',
-      serviceOrder: '',
-      carId: '',
-      odometer: 0,
-      engineHours: 0,
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      type: 'planned',
-      serviceDescription: '',
-    });
+    setFormData(initialFormData);
+    setErrors({});
+    
+    setMessage(`✅ Log for car ${newLog.carId} created`);
+    setTimeout(() => setMessage(null), 3000);
   };
+
+  const inputClass = (field: string) =>
+    `border rounded p-2 ${errors[field] ? 'border-red-500' : 'border-gray-300'}`;
 
   return (
     <form className="flex flex-col gap-2 p-2 border rounded">
@@ -87,34 +96,44 @@ export const ServiceLogForm = () => {
         placeholder="Provider ID"
         value={formData.providerId}
         onChange={e => setFormData({ ...formData, providerId: e.target.value })}
-        className="border rounded p-2"
+        className={inputClass('providerId')}
       />
+      {errors.providerId && <span className="text-red-500 text-sm">{errors.providerId}</span>}
+
       <input
         placeholder="Service Order"
         value={formData.serviceOrder}
         onChange={e => setFormData({ ...formData, serviceOrder: e.target.value })}
-        className="border rounded p-2"
+        className={inputClass('serviceOrder')}
       />
+      {errors.serviceOrder && <span className="text-red-500 text-sm">{errors.serviceOrder}</span>}
+
       <input
         placeholder="Car ID"
         value={formData.carId}
         onChange={e => setFormData({ ...formData, carId: e.target.value })}
-        className="border rounded p-2"
+        className={inputClass('carId')}
       />
+      {errors.carId && <span className="text-red-500 text-sm">{errors.carId}</span>}
+
       <input
         type="number"
         placeholder="Odometer"
         value={formData.odometer}
         onChange={e => setFormData({ ...formData, odometer: Number(e.target.value) })}
-        className="border rounded p-2"
+        className={inputClass('odometer')}
       />
+      {errors.odometer && <span className="text-red-500 text-sm">{errors.odometer}</span>}
+
       <input
         type="number"
         placeholder="Engine Hours"
         value={formData.engineHours}
         onChange={e => setFormData({ ...formData, engineHours: Number(e.target.value) })}
-        className="border rounded p-2"
+        className={inputClass('engineHours')}
       />
+      {errors.engineHours && <span className="text-red-500 text-sm">{errors.engineHours}</span>}
+
       <input
         type="date"
         value={formData.startDate}
@@ -125,29 +144,37 @@ export const ServiceLogForm = () => {
             .split('T')[0];
           setFormData({ ...formData, startDate: newStart, endDate: newEnd });
         }}
-        className="border rounded p-2"
+        className={inputClass('startDate')}
       />
+      {errors.startDate && <span className="text-red-500 text-sm">{errors.startDate}</span>}
+
       <input
         type="date"
         value={formData.endDate}
         onChange={e => setFormData({ ...formData, endDate: e.target.value })}
-        className="border rounded p-2"
+        className={inputClass('endDate')}
       />
+      {errors.endDate && <span className="text-red-500 text-sm">{errors.endDate}</span>}
+
       <select
         value={formData.type}
         onChange={e => setFormData({ ...formData, type: e.target.value as ServiceType })}
-        className="border rounded p-2"
+        className={inputClass('type')}
       >
         <option value="planned">Planned</option>
         <option value="unplanned">Unplanned</option>
         <option value="emergency">Emergency</option>
       </select>
+
       <textarea
         placeholder="Service Description"
         value={formData.serviceDescription}
         onChange={e => setFormData({ ...formData, serviceDescription: e.target.value })}
-        className="border rounded p-2"
+        className={inputClass('serviceDescription')}
       />
+      {errors.serviceDescription && (
+        <span className="text-red-500 text-sm">{errors.serviceDescription}</span>
+      )}
 
       <div className="flex items-center gap-2 mt-2">
         <button
@@ -162,6 +189,8 @@ export const ServiceLogForm = () => {
           {status === 'saved' && 'Draft saved'}
         </span>
       </div>
+
+      {message && <div className="mt-2 text-green-600 text-sm">{message}</div>}
     </form>
   );
 };

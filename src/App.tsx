@@ -4,6 +4,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './redux/store';
 import { LogsTable } from './components/LogsTable';
 import { ServiceLogForm } from './components/ServiceLogForm';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <h1 className="text-2xl font-bold mb-4">Service Logs</h1>
           <ServiceLogForm />
           <LogsTable />
+          <Toaster position="top-right" reverseOrder={false} />
         </div>
       </PersistGate>
     </Provider>
