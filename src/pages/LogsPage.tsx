@@ -1,6 +1,7 @@
 import React from 'react'
-import { ServiceLogForm } from '../components/ServiceLogForm'
+// import { ServiceLogForm } from '../components/ServiceLogForm'
 import { LogsTable } from '../components/LogsTable'
+import { ServiceLogForm } from '../components/ServiceLogForm/ServiceLogForm'
 
 export default function LogsPage() {
   return (
