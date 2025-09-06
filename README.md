@@ -54,15 +54,15 @@ src/
 ├─ components/
 │ ├─ ServiceLogForm.tsx
 │ ├─ LogsTable.tsx
-│ ├─ EditLogModal.tsx
+│ └─ EditLogModal.tsx
 ├─ redux/
 │ ├─ slices/
 │ │ ├─ draftsSlice.ts
-│ │ ├─ logsSlice.ts
-│ ├─ store.ts
+│ │ └─ logsSlice.ts
+│ └─ store.ts
 ├─ hooks/
 │ ├─ useAutoSaveDraft.ts
-│ ├─ useToast.ts
+│ └─ useToast.ts
 ├─ types/
 │ └─ index.ts
 ├─ main.tsx
