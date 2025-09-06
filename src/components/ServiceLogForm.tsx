@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { RootState } from '../redux/store';
 import { useAutoSaveDraft } from '../hooks/useAutoSaveDraft';
 import { DraftLog } from '../types/index';
+import { validateServiceLog, ValidationErrors } from '../utils/validation';
+import { safeSet } from '../utils/storage';
 
 export const ServiceLogForm = () => {
   const dispatch = useDispatch();
@@ -25,7 +27,7 @@ export const ServiceLogForm = () => {
   };
 
   const [formData, setFormData] = useState<Omit<DraftLog, 'id' | 'lastSaved'>>(initialFormData);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<ValidationErrors>({});
   const [message, setMessage] = useState<string | null>(null);
 
   const loadedOnceRef = useRef(false);
@@ -50,25 +52,12 @@ export const ServiceLogForm = () => {
   const existingDraftId = drafts.length ? drafts[drafts.length - 1].id : undefined;
   const status = useAutoSaveDraft(formData, existingDraftId);
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.providerId.trim()) newErrors.providerId = 'Provider ID is required';
-    if (!formData.serviceOrder.trim()) newErrors.serviceOrder = 'Service Order is required';
-    if (!formData.carId.trim()) newErrors.carId = 'Car ID is required';
-    if (formData.odometer <= 0) newErrors.odometer = 'Odometer must be greater than 0';
-    if (formData.engineHours < 0) newErrors.engineHours = 'Engine hours cannot be negative';
-    if (!formData.startDate) newErrors.startDate = 'Start date is required';
-    if (!formData.endDate) newErrors.endDate = 'End date is required';
-    if (new Date(formData.endDate) < new Date(formData.startDate)) {
-      newErrors.endDate = 'End date cannot be before start date';
-    }
-    if (!formData.serviceDescription.trim()) newErrors.serviceDescription = 'Description is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleCreateLog = () => {
-    if (!validate()) return;
+    const validationErrors = validateServiceLog(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
     const newLog: ServiceLog = {
       ...formData,
@@ -81,8 +70,9 @@ export const ServiceLogForm = () => {
     if (latestDraftId) dispatch(deleteDraft(latestDraftId));
 
     setFormData(initialFormData);
+    safeSet('serviceLogForm.data', initialFormData);
     setErrors({});
-    
+
     setMessage(`✅ Log for car ${newLog.carId} created`);
     setTimeout(() => setMessage(null), 3000);
   };
