@@ -1,22 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
 import { EditLogModal } from './EditLogModal';
 import { DeleteLogModal } from './DeleteLogModal';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { safeGet, safeSet } from '../utils/storage';
 
 export const LogsTable: React.FC = () => {
   const logs = useSelector((state: RootState) => state.logs.logs);
 
+  const [search, setSearch] = useState(() =>
+    safeGet<string>('logs.search', '')
+  );
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const [typeFilter, setTypeFilter] = useState(() =>
+    safeGet<string>('logs.typeFilter', 'all')
+  );
+  const [startDateFrom, setStartDateFrom] = useState(() =>
+    safeGet<string>('logs.startDateFrom', '')
+  );
+  const [startDateTo, setStartDateTo] = useState(() =>
+    safeGet<string>('logs.startDateTo', '')
+  );
+
+  const [sortField, setSortField] = useState<'startDate' | 'odometer' | null>(() =>
+    safeGet<'startDate' | 'odometer' | null>('logs.sortField', null)
+  );
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>(() =>
+    safeGet<'asc' | 'desc' | 'default'>('logs.sortOrder', 'default')
+  );
+
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [startDateFrom, setStartDateFrom] = useState('');
-  const [startDateTo, setStartDateTo] = useState('');
+  useEffect(() => {
+    safeSet('logs.search', search);
+  }, [search]);
 
-  const [sortField, setSortField] = useState<'startDate' | 'odometer' | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>('default');
+  useEffect(() => {
+    safeSet('logs.typeFilter', typeFilter);
+  }, [typeFilter]);
+
+  useEffect(() => {
+    safeSet('logs.startDateFrom', startDateFrom);
+  }, [startDateFrom]);
+
+  useEffect(() => {
+    safeSet('logs.startDateTo', startDateTo);
+  }, [startDateTo]);
+
+  useEffect(() => {
+    safeSet('logs.sortField', sortField);
+    safeSet('logs.sortOrder', sortOrder);
+  }, [sortField, sortOrder]);
 
   const toggleSort = (field: 'startDate' | 'odometer') => {
     if (sortField === field) {
@@ -38,9 +75,9 @@ export const LogsTable: React.FC = () => {
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch =
-      log.providerId.includes(search) ||
-      log.serviceOrder.includes(search) ||
-      log.carId.includes(search);
+      log.providerId.includes(debouncedSearch) ||
+      log.serviceOrder.includes(debouncedSearch) ||
+      log.carId.includes(debouncedSearch);
 
     const matchesType = typeFilter === 'all' ? true : log.type === typeFilter;
 
