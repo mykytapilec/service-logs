@@ -3,7 +3,6 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './redux/store';
 import { LogsTable } from './components/LogsTable';
-// import { ServiceLogForm } from './components/ServiceLogForm';
 import { Toaster } from 'react-hot-toast';
 import { ServiceLogForm } from './components/ServiceLogForm/ServiceLogForm';
 
